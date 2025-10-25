@@ -2,15 +2,27 @@
 import { GoogleGenAI, Modality } from "@google/genai";
 import type { AspectRatio, GroundingSource } from '../types';
 
+// FIX: Per coding guidelines, API key must be from process.env.API_KEY. This also fixes the TypeScript error.
 const API_KEY = process.env.API_KEY;
 
 if (!API_KEY) {
-    throw new Error("API_KEY environment variable not set");
+    // In a deployed environment, this error is less likely to be seen in the console,
+    // but it's good practice for development.
+    // We'll add a user-facing error message in the UI layer.
+    console.error("API_KEY environment variable not set");
 }
 
-const ai = new GoogleGenAI({ apiKey: API_KEY });
+// Initialize AI instance only if API_KEY is available.
+const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
+
+const checkApiKey = () => {
+    if (!ai) {
+        throw new Error("API Key is missing. Please configure your environment variables.");
+    }
+};
 
 export const generateImage = async (prompt: string, aspectRatio: AspectRatio): Promise<{ base64Image: string; mimeType: string; }> => {
+    checkApiKey();
     try {
         const response = await ai.models.generateImages({
             model: 'imagen-4.0-generate-001',
@@ -49,6 +61,7 @@ const fileToGenerativePart = async (file: File) => {
 };
 
 export const editImage = async (prompt: string, imageFile: File): Promise<{ base64Image: string, mimeType: string }> => {
+    checkApiKey();
     try {
         const imagePart = await fileToGenerativePart(imageFile);
 
@@ -83,6 +96,7 @@ export const editImage = async (prompt: string, imageFile: File): Promise<{ base
 
 
 export const getPromptIdeas = async (topic: string): Promise<{ suggestion: string, sources: GroundingSource[] }> => {
+    checkApiKey();
     try {
         const fullPrompt = `Generate a single, highly detailed and creative image generation prompt based on the topic: "${topic}". The prompt should be descriptive and imaginative, suitable for an AI image generator.`;
         
